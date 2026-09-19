@@ -4,198 +4,198 @@
 
 # Deduply
 
-**A lightweight, blazing-fast, and safe desktop duplicate file cleaner.**
+**轻量、极速、安全的现代化桌面重复文件清理工具**
 
 [![Python Version](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
 [![GUI Framework](https://img.shields.io/badge/GUI-PySide6%20(Qt6)-41CD52.svg)](https://wiki.qt.io/Qt_for_Python)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
-**English** · [简体中文](README_zh.md)
+**简体中文** · [English](README_en.md)
 
 </div>
 
 ---
 
-## 📌 Table of Contents
+## 📌 目录
 
-- [💡 Why Deduply?](#-why-deduply)
-- [⚙️ How It Works: Progressive 3-Tier Hashing](#️-how-it-works-progressive-3-tier-hashing)
-- [✨ Key Features](#-key-features)
-- [📦 Installation](#-installation)
-- [🚀 Quick Start](#-quick-start)
-- [🛠️ Standalone Executable Packaging (PyInstaller)](#️-standalone-executable-packaging-pyinstaller)
-- [🧩 Tech Stack & Architecture](#-tech-stack--architecture)
-- [❓ Frequently Asked Questions (FAQ)](#-frequently-asked-questions-faq)
-- [📄 License](#-license)
-
----
-
-## 💡 Why Deduply?
-
-Disk bloat caused by redundant media files, scattered downloads, and repeated folder backups is a common headache. Most traditional duplicate finders have two major flaws:
-1. **Sluggish Performance & High I/O Overhead**: They calculate full cryptographic hashes across every single file. When dealing with tens of gigabytes of videos or archives, disk I/O thrashes and scans drag on painfully.
-2. **High Risk of Data Loss**: Many tools permanently erase duplicates on disk, meaning a single misclick can cause irreversible data disasters.
-
-**Deduply** was built from the ground up to solve both problems:
-- 🚀 **10x to 100x Speedup**: A progressive pipeline (*Size Partitioning → 64KB Prefix Hash → Full SHA-256 Verification*) eliminates over 99% of pointless full-file disk reads.
-- 🛡️ **Recycle Bin Safeguard**: Powered by `send2trash`, redundant files are safely routed to the OS Recycle Bin / Trash rather than permanently wiped, giving you total peace of mind.
-- 🎨 **Sleek & Responsive Desktop UX**: Asynchronous multithreading keeps the UI 100% fluid even when traversing deep hierarchies with millions of files. Includes dark theme, folder drag-and-drop, and on-the-fly bilingual switching.
+- [💡 为什么选择 Deduply？](#-为什么选择-deduply)
+- [⚙️ 工作原理：分层渐进式哈希](#️-工作原理分层渐进式哈希)
+- [✨ 核心特性](#-核心特性)
+- [📦 安装指南](#-安装指南)
+- [🚀 快速上手](#-快速上手)
+- [🛠️ 可执行文件打包 (PyInstaller)](#️-可执行文件打包-pyinstaller)
+- [🧩 技术栈与项目架构](#-技术栈与项目架构)
+- [❓ 常见问题 (FAQ)](#-常见问题-faq)
+- [📄 开源协议](#-开源协议)
 
 ---
 
-## ⚙️ How It Works: Progressive 3-Tier Hashing
+## 💡 为什么选择 Deduply？
 
-Deduply divides duplicate identification into three progressive stages, filtering out non-duplicate candidates at each step to minimize disk read operations:
+在日常办公、影音整理和多重备份中，硬盘常被散落的重复文件大量蚕食。然而大多数传统查重工具存在两大硬伤：
+1. **速度慢、I/O 负载重**：直接对每个文件计算全量哈希，遇上数十 GB 的视频或压缩包时硬盘狂转、耗时极长。
+2. **误删风险高**：直接物理彻底抹除文件，一旦误勾选将造成不可逆的数据灾难。
+
+**Deduply** 专为解决这两个痛点而生：
+- 🚀 **10~100 倍检测提速**：独创「大小初筛 → 64KB 前缀快速哈希 → 全量 SHA-256 校验」三层渐进流水线，避免 99% 的无意义硬盘全量读取。
+- 🛡️ **回收站安全防护**：基于 `send2trash` 将冗余文件安全移至操作系统回收站，绝不直接物理销毁，随时可以撤销恢复。
+- 🎨 **流畅现代交互**：异步多线程设计，即使扫描百万文件界面也丝滑不卡顿；支持深色主题、拖拽添加及中英文一键实时切换。
+
+---
+
+## ⚙️ 工作原理：分层渐进式哈希
+
+Deduply 将重复检测过程分为三个递进阶段，层层过滤非重复文件，最大化节省磁盘 I/O：
 
 ```
-                      [ All Files to Scan ]
-                                │
-                                ▼
+                    [ 待检测的所有文件 ]
+                             │
+                             ▼
  ┌──────────────────────────────────────────────────────────┐
- │ Tier 1: File Size Grouping                               │
- │ • Reads filesystem metadata only (Zero file-read I/O)     │
- │ • Immediately discards files with unique sizes           │
+ │ 第 1 层：文件大小分组 (File Size Grouping)                 │
+ │ • 仅读取文件元数据（零文件内容 I/O 消耗）                  │
+ │ • 剔除所有独一无二大小的文件                               │
  └───────────────────────────┬──────────────────────────────┘
-                             ▼ (Only for files with identical sizes)
+                             ▼ (仅对同大小文件)
  ┌──────────────────────────────────────────────────────────┐
- │ Tier 2: 64KB Prefix Hash (Partial SHA-256)               │
- │ • Reads only the first 64KB of candidate files           │
- │ • Rapidly discards 95%+ of false-positive size matches    │
+ │ 第 2 层：64KB 前缀哈希 (Partial Prefix Hashing)          │
+ │ • 仅读取文件前 64KB 计算快速 SHA-256 摘要                 │
+ │ • 低 I/O 成本过滤 95%+ 的假性大小重合文件                  │
  └───────────────────────────┬──────────────────────────────┘
-                             ▼ (Only for files with matching prefixes)
+                             ▼ (仅对前缀相同的文件)
  ┌──────────────────────────────────────────────────────────┐
- │ Tier 3: Full SHA-256 Cryptographic Verification          │
- │ • Reads full content to compute the final digest         │
- │ • Guarantees 100% cryptographic collision resistance     │
+ │ 第 3 层：全量哈希确认 (Full SHA-256 Verification)        │
+ │ • 读取完整文件数据计算最终哈希                             │
+ │ • 100% 密码学级别精确确认重复项，杜绝误判                 │
  └───────────────────────────┬──────────────────────────────┘
                              ▼
-                 [ 🎯 Confirmed Duplicates ]
+                    [ 🎯 确认重复文件组 ]
 ```
 
-### Traditional Tools vs Deduply Performance
+### 传统工具 vs Deduply 性能对比
 
-| Scenario | Traditional Full-Hash Tools | Deduply 3-Tier Engine | Performance Gain |
+| 场景 | 传统全盘哈希工具 | Deduply 分层引擎 | 性能提升 |
 | :--- | :--- | :--- | :--- |
-| **Large files with unique sizes** | Reads every byte from disk | Inspects metadata only (**0 file I/O**) | **Near-instantaneous (100x+)** |
-| **Files sharing size but different content** | Reads 100% of all matching files | Reads first 64KB and immediately skips | **10x to 50x faster** |
-| **Genuine duplicates** | Computes full hashes | Filters first, then verifies candidates | **100% precision with minimal I/O** |
+| **大量独占大小的大文件** | 逐个读取全盘完整内容 | 仅读取元数据，**零文件内容 I/O** | **接近瞬间完成 (100x+)** |
+| **大小相同的异构文件** | 全量读取所有同尺寸文件 | 仅读取前 64KB 即可判定不同并跳过 | **快 10~50 倍** |
+| **完全相同的真正重复文件** | 全量哈希比对 | 精准识别后仅对候选组全量校验 | **100% 精确防碰撞** |
 
 ---
 
-## ✨ Key Features
+## ✨ 核心特性
 
-- 🔍 **Progressive Hashing**: Size grouping + 64KB prefix pre-screening + full SHA-256 check, delivering unmatched efficiency for multimedia and large files.
-- 🗑️ **Safe Recycle Bin Deletion**: Soft-deletes redundant copies to the system trash via `send2trash`, enabling safe inspection and recovery anytime.
-- 📂 **Native Drag & Drop**: Simply drag and drop any folder straight into the application window to initialize scanning.
-- 🌐 **Real-time Bilingual UI**: Switch between English and Simplified Chinese instantly from the top bar without needing to restart.
-- ⏱️ **Smart Retention Policies**: Automatically sorts duplicate groups by file modification time—choose **"Keep Newest"** or **"Keep Oldest"** in one click.
-- 🧵 **Asynchronous & Non-blocking**: Workflows run decoupled from the UI thread (`QThread` + `WorkerSignals`), providing responsive progress bars and one-click scan cancellation.
-- 🎨 **Modern Dark Theme**: Ergonomic dark aesthetic featuring dual-stage progress feedback (file indexing vs duplicate analysis) and reclaimable space stats.
-- 🛡️ **Robust Edge Case Handling**: Automatically ignores 0-byte empty files and symbolic links (`followlinks=False`), reporting inaccessible files gracefully without crashing.
+- 🔍 **分层哈希加速**：大小初筛 + 64KB 前缀筛选 + 全量校验，多媒体与海量文档场景极致加速。
+- 🗑️ **安全回收站删除**：支持跨平台回收站软删除，保留撤回与恢复空间；如环境缺少回收站支持则给出显著警告。
+- 📂 **原生拖放支持**：直接将文件夹拖拽至软件界面，立即就绪，免去深层目录选择烦恼。
+- 🌐 **中英双语即时切换**：UI 内置中英文语言包，下拉框切换即时生效，无需重启软件。
+- ⏱️ **智能留存策略**：支持在重复组内自动按文件修改时间排序，一键选择 **「保留最新文件」** 或 **「保留最旧文件」**。
+- 🧵 **异步多线程响应**：UI 线程与后台扫描/分析分离（`QThread` + `WorkerSignals`），实时进度与日志展示，支持中途一键中止。
+- 🎨 **护眼暗黑主题**：精心调校的暗色系界面，清晰展示两阶段扫描进度与可节省磁盘空间统计。
+- 🛡️ **健壮异常处理**：自动跳过 0 字节空文件与符号链接（Symlink），遇到无权限读取的文件友好报警，不中断整体扫描。
 
 ---
 
-## 📦 Installation
+## 📦 安装指南
 
-### Prerequisites
-- **Python** 3.8 or higher
-- Supported on Windows, macOS, and major Linux desktop environments
+### 环境要求
+- **Python** 3.8 或更高版本
+- 支持 Windows、macOS 及主流 Linux 桌面环境
 
-### Steps
+### 步骤
 
-1. **Clone or download the repository**:
+1. **克隆或下载本仓库**：
    ```bash
    git clone https://github.com/TheBitGlow/Deduply.git
    cd Deduply
    ```
 
-2. **Install required dependencies**:
+2. **安装依赖库**：
    ```bash
    pip install -r requirements.txt
    ```
-   *Or install manually:*
+   *或手动安装核心依赖：*
    ```bash
    pip install PySide6>=6.5.0 send2trash>=1.8.0
    ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 快速上手
 
-1. **Launch the application**:
+1. **启动程序**：
    ```bash
    python Deduply.py
    ```
 
-2. **Standard Workflow**:
-   1. **Select Directory**: Click **"Select Folder"** or simply **drag & drop** a directory into the window.
-   2. **Set Policy**: Choose your preferred retention strategy (`Keep Newest` or `Keep Oldest`) from the dropdown.
-   3. **Start Scan**: Click **"Start Scan"**. The dual-phase progress bar tracks indexing and hashing.
-   4. **Inspect Report**: Review duplicate groups, file paths, timestamps, and total reclaimable space.
-   5. **Clean Safely**: Click **"Delete Duplicates"**, confirm the prompt, and redundant copies will be safely sent to the Recycle Bin.
+2. **基本操作流程**：
+   1. **选择目录**：点击 **「选择文件夹」** 按钮，或者将目标目录直接 **拖入窗口**；
+   2. **设定策略**：在顶部下拉框中根据需求选择保留方式（`保留最新文件` 或 `保留最旧文件`）；
+   3. **开始扫描**：点击 **「开始扫描」**，窗口将分阶段显示文件索引与重复哈希分析进度；
+   4. **确认报告**：扫描完成后查看详细的重复文件组、各路径、创建/修改时间以及**总计可节省空间**；
+   5. **安全清理**：点击 **「删除重复文件」**，弹出二次确认后将冗余副本安全移入回收站。
 
 ---
 
-## 🛠️ Standalone Executable Packaging (PyInstaller)
+## 🛠️ 可执行文件打包 (PyInstaller)
 
-Deduply includes built-in frozen resource path resolution (`resource_path`), making it seamless to package into a standalone single executable (`.exe` on Windows):
+Deduply 代码内已内置打包资源定位函数（`resource_path`），可轻松打包为无依赖的单一可执行文件（`.exe`）：
 
 ```bash
-# 1. Install PyInstaller
+# 1. 安装 PyInstaller
 pip install pyinstaller
 
-# 2. Package into a single executable without console window
+# 2. 一键打包为 Windows 单文件免安装程序
 pyinstaller --noconsole --onefile --icon=srch.ico --add-data "srch.ico;." Deduply.py
 ```
 
-The resulting `Deduply.exe` will be located inside the `dist/` folder, completely self-contained and ready to run.
+打包完成后，可在生成的 `dist/` 目录中找到独立的 `Deduply.exe`，直接双击即可运行。
 
 ---
 
-## 🧩 Tech Stack & Architecture
+## 🧩 技术栈与项目架构
 
-### Tech Stack
+### 技术选型
 
-| Component | Technology | Description |
+| 模块 | 采用技术 | 说明 |
 | :--- | :--- | :--- |
-| **GUI Framework** | [PySide6](https://wiki.qt.io/Qt_for_Python) | Modern Qt6 Python bindings providing native performance, event loops, and widgets |
-| **Hashing Engine** | Python `hashlib` (SHA-256) | Balanced computational efficiency with cryptographic anti-collision security |
-| **Safe Deletion** | [Send2Trash](https://github.com/arsenetar/send2trash) | Cross-platform native Recycle Bin / Trash API (Windows, macOS, Linux FreeDesktop) |
-| **Filesystem Access** | Python standard `os` / `stat` | Directory traversal, metadata caching, and timestamp parsing |
+| **图形界面** | [PySide6](https://wiki.qt.io/Qt_for_Python) | 现代 Qt6 Python 绑定，提供稳定高效的桌面交互与事件循环 |
+| **哈希摘要** | Python `hashlib` (SHA-256) | 兼顾计算效率与极高的密码学抗碰撞安全性 |
+| **安全删除** | [Send2Trash](https://github.com/arsenetar/send2trash) | 跨平台原生回收站调用接口（Windows / macOS / FreeDesktop） |
+| **文件系统** | Python 内置 `os` / `stat` | 统一的文件遍历、元数据缓存与时间戳解析 |
 
-### Class Architecture
+### 核心类结构
 
-- `DuplicateFileFinder`: The core detection engine implementing 3-tier filtering, stats caching, and report generation.
-- `DuplicateFinderWorker`: `QThread`-based worker executing background scans and emitting thread-safe Qt signals.
-- `DuplicateFileFinderApp`: The primary `QMainWindow` handling UI layout, drag & drop events, dynamic localization, and user interactions.
-
----
-
-## ❓ Frequently Asked Questions (FAQ)
-
-<details>
-<summary><b>Q1: Can I recover files after deleting duplicates?</b></summary>
-Yes. Deduply sends redundant files directly to your operating system's Recycle Bin / Trash via <code>send2trash</code>. You can easily inspect and restore them at any time.
-</details>
-
-<details>
-<summary><b>Q2: Why weren't two files of the exact same size flagged as duplicates?</b></summary>
-Deduply relies on cryptographic content verification. If two files differ by even a single byte, their 64KB prefix or full SHA-256 hashes will be entirely distinct. Deduply will never falsely flag files based solely on matching sizes or names.
-</details>
-
-<details>
-<summary><b>Q3: Will it delete symbolic links or system shortcuts?</b></summary>
-No. Deduply explicitly ignores symbolic links (<code>followlinks=False</code> and checks <code>islink</code>) and skips 0-byte empty files. However, scanning sensitive system directories (like <code>C:\Windows</code>) is still discouraged.
-</details>
-
-<details>
-<summary><b>Q4: What happens if I want to stop an ongoing scan?</b></summary>
-You can click "Cancel" at any time. Because tasks run asynchronously inside a dedicated <code>QThread</code>, the UI remains fully responsive and terminates the search safely.
-</details>
+- `DuplicateFileFinder`: 核心查重引擎，实现三层哈希过滤与空间节省核算算法。
+- `DuplicateFinderWorker`: 基于 `QThread` 的工作线程，实现非阻塞后台计算并发送跨线程信号。
+- `DuplicateFileFinderApp`: 主窗口控制器，统一管理 UI 状态、拖放事件、语言热切换与日志呈现。
 
 ---
 
-## 📄 License
+## ❓ 常见问题 (FAQ)
 
-This project is licensed under the [MIT License](LICENSE). Contributions, issues, and feature requests are welcome!
+<details>
+<summary><b>Q1: 删除重复文件后还能恢复吗？</b></summary>
+可以。Deduply 默认通过系统级回收站机制（<code>send2trash</code>）执行删除，被清理的文件会存放在操作系统的回收站中，您可以随时在回收站内恢复。
+</details>
+
+<details>
+<summary><b>Q2: 为什么有些相同大小的文件没有被识别为重复？</b></summary>
+Deduply 采用严格的哈希校验。如果两个文件内容有一字节不同，64KB 前缀或全量 SHA-256 哈希值都会完全不同，确保绝不会因文件名或大小相似而造成误杀。
+</details>
+
+<details>
+<summary><b>Q3: 会误删系统关键文件或快捷方式吗？</b></summary>
+Deduply 默认排除了快捷方式/符号链接（<code>followlinks=False</code> 且自动跳过 <code>islink</code>），并自动过滤 0 字节文件。但建议用户不要对系统核心目录（如 <code>C:\Windows</code>）进行批量扫描清理。
+</details>
+
+<details>
+<summary><b>Q4: 界面卡死怎么办？</b></summary>
+Deduply 的计算任务完全运行在独立后台线程中，界面在任何大文件运算过程中均能保持响应，您可以随时点击「取消扫描」终止任务。
+</details>
+
+---
+
+## 📄 开源协议
+
+本项目采用 [MIT License](LICENSE) 开源。欢迎提交 Issue 或 Pull Request 共同改进！
