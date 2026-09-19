@@ -85,14 +85,16 @@ Deduply divides duplicate identification into three progressive stages, filterin
 
 ## ✨ Key Features
 
-- 🔍 **Progressive Hashing**: Size grouping + 64KB prefix pre-screening + full SHA-256 check, delivering unmatched efficiency for multimedia and large files.
-- 🗑️ **Safe Recycle Bin Deletion**: Soft-deletes redundant copies to the system trash via `send2trash`, enabling safe inspection and recovery anytime.
+- 🔍 **Progressive Hashing**: Size grouping + 64KB prefix screening + full SHA-256 (with small-file hash caching and 1MB I/O buffer), delivering 10x-100x speedups.
+- 📋 **Interactive Tree View**: Group-based tree view with checkboxes, double-click to open files, and right-click to reveal in File Explorer.
+- 🗑️ **Safe Recycle Bin Deletion**: Deletes only checked files to the OS Recycle Bin via `send2trash`, calculating freed space in real time.
+- ⚙️ **Pre-scan Filtering**: Filter by minimum file size threshold (e.g. >1MB, >10MB) and automatically skip hidden/system directories.
+- 📊 **Structured Report Export**: One-click export of duplicate analysis reports into Excel-ready UTF-8 BOM CSV files.
 - 📂 **Native Drag & Drop**: Simply drag and drop any folder straight into the application window to initialize scanning.
 - 🌐 **Real-time Bilingual UI**: Switch between English and Simplified Chinese instantly from the top bar without needing to restart.
-- ⏱️ **Smart Retention Policies**: Automatically sorts duplicate groups by file modification time—choose **"Keep Newest"** or **"Keep Oldest"** in one click.
-- 🧵 **Asynchronous & Non-blocking**: Workflows run decoupled from the UI thread (`QThread` + `WorkerSignals`), providing responsive progress bars and one-click scan cancellation.
-- 🎨 **Modern Dark Theme**: Ergonomic dark aesthetic featuring dual-stage progress feedback (file indexing vs duplicate analysis) and reclaimable space stats.
-- 🛡️ **Robust Edge Case Handling**: Automatically ignores 0-byte empty files and symbolic links (`followlinks=False`), reporting inaccessible files gracefully without crashing.
+- ⏱️ **Smart Retention Policies**: Toggle "Keep Newest" or "Keep Oldest"; retained files automatically float to the top unchecked, while duplicates are checked.
+- 🧵 **Asynchronous & Non-blocking**: Decoupled background workers (`QThread`) with smooth dual-stage progress indicators and one-click cancellation.
+- 🛡️ **Robust Exception Handling**: Gracefully skips inaccessible directories during `os.walk`, automatically ignoring zero-byte files and symlinks.
 
 ---
 
